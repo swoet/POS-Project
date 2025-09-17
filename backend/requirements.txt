@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+python-multipart
+passlib[bcrypt]
+python-jose
+psycopg2-binary
+alembic
+slowapi
+pyotp
+websockets
+pytest
+httpx
+python-dotenv

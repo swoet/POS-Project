@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>POS Desktop Prototype</title></head>
+<body>
+  <h1>POS Desktop (Prototype)</h1>
+  <div>
+    <label>Item name: <input id="itemName"></label>
+    <label>Price: <input id="price" type="number" step="0.01"></label>
+    <button onclick="addItem()">Add</button>
+  </div>
+  <h3>Basket</h3>
+  <ul id="basket"></ul>
+  <div>Total: <span id="total">0.00</span></div>
+  <button onclick="checkout()">Checkout (save locally)</button>
+  <button onclick="sync()">Sync to cloud</button>
+  <script>
+    const backend = "http://localhost:8000";
+    let basket = [];
+    function addItem(){
+      const name = document.getElementById('itemName').value;
+      const price = parseFloat(document.getElementById('price').value || 0);
+      basket.push({name, price});
+      render();
+    }
+    function render(){
+      const ul = document.getElementById('basket');
+      ul.innerHTML = "";
+      let total = 0;
+      basket.forEach((it,i)=>{ total += it.price; const li = document.createElement('li'); li.textContent = `${it.name} - ${it.price.toFixed(2)}`; ul.appendChild(li); })
+      document.getElementById('total').textContent = total.toFixed(2);
+    }
+    function checkout(){
+      const sale = {
+        timestamp: new Date().toISOString(),
+        items_json: JSON.stringify(basket),
+        total: basket.reduce((s,i)=>s+i.price,0)
+      };
+      // save locally in file via node fs if available, otherwise in localStorage
+      if(window.require){
+        const fs = require('fs');
+        const p = 'local_sales_queue.json';
+        let arr = [];
+        if(fs.existsSync(p)){ arr = JSON.parse(fs.readFileSync(p)); }
+        arr.push(sale);
+        fs.writeFileSync(p, JSON.stringify(arr, null, 2));
+        alert('Saved locally to ' + p);
+      } else {
+        const arr = JSON.parse(localStorage.getItem('queue')||'[]');
+        arr.push(sale);
+        localStorage.setItem('queue', JSON.stringify(arr));
+        alert('Saved to localStorage');
+      }
+      basket = []; render();
+    }
+    async function sync(){
+      // read local queue and POST to backend /sales/bulk_sync
+      let arr = [];
+      if(window.require){
+        const fs = require('fs');
+        const p = 'local_sales_queue.json';
+        if(fs.existsSync(p)){ arr = JSON.parse(fs.readFileSync(p)); }
+        if(arr.length===0){ alert('No local sales'); return; }
+        const res = await fetch(backend + '/sales/bulk_sync', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(arr)});
+        const data = await res.json();
+        alert('Synced: ' + data.count + ' sales');
+        fs.writeFileSync(p, JSON.stringify([]));
+      } else {
+        arr = JSON.parse(localStorage.getItem('queue')||'[]');
+        if(arr.length===0){ alert('No local sales'); return; }
+        const res = await fetch(backend + '/sales/bulk_sync', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(arr)});
+        const data = await res.json();
+        alert('Synced: ' + data.count + ' sales');
+        localStorage.setItem('queue', JSON.stringify([]));
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>POS Admin - Prototype</title>
+  <style>
+    body{font-family:Arial; margin:20px}
+    table{border-collapse:collapse; width:100%}
+    th,td{border:1px solid #ddd; padding:8px}
+    th{background:#f4f4f4}
+  </style>
+</head>
+<body>
+  <h1>POS Admin (Prototype)</h1>
+  <button onclick="loadSales()">Load sales from backend</button>
+  <table id="salesTable">
+    <thead><tr><th>ID</th><th>Timestamp</th><th>Items (JSON)</th><th>Total</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    const backend = "http://localhost:8000";
+    async function loadSales(){
+      const res = await fetch(backend + "/sales");
+      const data = await res.json();
+      const tbody = document.querySelector("#salesTable tbody");
+      tbody.innerHTML = "";
+      data.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${s.id}</td><td>${new Date(s.timestamp).toLocaleString()}</td><td><pre>${s.items_json}</pre></td><td>${s.total}</td>`;
+        tbody.appendChild(tr);
+      })
+    }
+  </script>
+</body>
+</html>
