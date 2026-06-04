@@ -187,3 +187,13 @@ class DatabaseManager:
 
 # Global database manager instance
 db_manager = DatabaseManager()
+
+
+async def init_db() -> bool:
+    """Initialize database resources and verify connectivity."""
+    return db_manager.check_connection()
+
+
+async def close_db() -> None:
+    """Dispose database connections during application shutdown."""
+    engine.dispose()
