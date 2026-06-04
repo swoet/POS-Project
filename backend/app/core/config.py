@@ -1,11 +1,10 @@
 """
 Configuration management with secure defaults and validation
 """
-import os
 import secrets
 from functools import lru_cache
 from typing import Optional, List
-from pydantic import BaseSettings, validator, Field
+from pydantic import validator, Field
 from pydantic_settings import BaseSettings as PydanticBaseSettings
 
 
@@ -15,6 +14,7 @@ class Settings(PydanticBaseSettings):
     # Application
     app_name: str = "POS System API"
     app_version: str = "2.0.0"
+    environment: str = Field(default="development", env="ENVIRONMENT")
     debug: bool = Field(default=False, env="DEBUG")
     
     # Database
@@ -86,6 +86,16 @@ class Settings(PydanticBaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+
+    @property
+    def DEBUG(self) -> bool:
+        """Backward-compatible uppercase access used by existing app code."""
+        return self.debug
+
+    @property
+    def ENVIRONMENT(self) -> str:
+        """Backward-compatible uppercase access used by existing app code."""
+        return self.environment
 
 
 @lru_cache()
