@@ -8,7 +8,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.database import init_db, close_db
+from app.core.database import init_db, close_db, db_manager
+from app.core.health import basic_health_payload, detailed_health_payload
 from app.core.logging import configure_logging, audit_logger
 from app.core.cache import cache_manager
 from app.middleware import setup_middleware
@@ -137,7 +138,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     """Basic health check"""
-    return {"status": "healthy", "timestamp": structlog.get_logger().info("Health check")}
+    return basic_health_payload()
 
 
 @app.get("/health/detailed")
@@ -145,20 +146,22 @@ async def detailed_health_check():
     """Detailed health check with dependency status"""
     try:
         # Check database
-        db_status = await init_db.check_connection()
+        db_status = db_manager.check_connection()
         
         # Check cache
-        cache_status = await cache_manager.health_check()
+        cache_status = cache_manager.health_check()
         
-        return {
-            "status": "healthy",
-            "services": {
-                "database": "healthy" if db_status else "unhealthy",
-                "cache": "healthy" if cache_status else "unhealthy"
-            },
-            "version": "1.0.0",
-            "environment": settings.ENVIRONMENT
-        }
+        payload = detailed_health_payload(
+            database_ok=db_status,
+            cache_ok=cache_status,
+            version=settings.app_version,
+            environment=settings.ENVIRONMENT,
+        )
+
+        return JSONResponse(
+            status_code=200 if db_status and cache_status else 503,
+            content=payload,
+        )
     except Exception as e:
         logger.error("Health check failed", error=str(e))
         return JSONResponse(
