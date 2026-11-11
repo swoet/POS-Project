@@ -116,3 +116,9 @@ jspm_packages/
 
 # Electron
 out/
+
+# Local environment files — never commit real credentials
+backend/.env
+.env
+*.env
+!*.env.example
